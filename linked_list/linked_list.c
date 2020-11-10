@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include "linked_list.h"
 
+// Helper func for check null root?
+
 node_t *ll_create(int value) {
   node_t *node = (node_t *)malloc(sizeof(node_t));
   if (node != NULL) {
@@ -11,21 +13,75 @@ node_t *ll_create(int value) {
 }
 
 node_t *ll_find(node_t *root, int value) {
+  // if NULL, return
+  // if found, stop searching and return it
+  // if not found, return NULL
+  while (root) {
+    if (root->value == value) {
+      break;
+    }
+
+    root = root->next;
+  }
   return root;
 }
 
 unsigned int ll_length(node_t *root) {
-  return 0;
+  int length = 0;
+
+  while (root) {
+    length++;
+    root = root->next;
+  }
+
+  return length;
 }
 
-void ll_insert(node_t *root, int value) {
+bool ll_append(node_t *root, int value) {
+  while (root) {
+    if (root->next == NULL) {
+      node_t *node = ll_create(value);
+      root->next = node;
+      return true;
+    }
 
-}
+    root = root->next;
+  }
 
-bool ll_remove(node_t *root, int value) {
-  return true;
-}
-
-bool ll_is_cyclic(node_t *root) {
+  // if input is NULL
   return false;
+}
+
+node_t *ll_remove(node_t *root, int value) {
+  if (root == NULL) {
+    return NULL;
+  }
+
+  node_t *node = root;
+  node_t *prev_node = NULL;
+
+  while (node) {
+    if (node->value == value) {
+        // head is val to remove
+        if (prev_node == NULL) {
+          root->value = node->value;
+          root->next = node->next;
+          free(root);
+          return node;
+        } else {
+          prev_node->next = node->next;
+          free(node);
+          return root;
+        }
+    }
+    prev_node = node;
+    node = node->next;
+  }
+
+  return NULL;
+}
+
+// seems kinda unneccessary?
+bool ll_is_cyclic(node_t *root) {
+
 }
