@@ -3,6 +3,9 @@
 #include <stdbool.h>
 #include "linked_list.h"
 
+// TO-DO: Write other tests
+//        length, append, remove
+
 bool run_tests() {
   int test_value = 3;
   node_t *test = ll_create(3);

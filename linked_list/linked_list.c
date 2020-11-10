@@ -1,8 +1,6 @@
 #include <stdlib.h>
 #include "linked_list.h"
 
-// Helper func for check null root?
-
 node_t *ll_create(int value) {
   node_t *node = (node_t *)malloc(sizeof(node_t));
   if (node != NULL) {
@@ -81,7 +79,7 @@ node_t *ll_remove(node_t *root, int value) {
   return NULL;
 }
 
-// seems kinda unneccessary?
+// seems kinda unneccessary? append method wouldn't ever permit one
 bool ll_is_cyclic(node_t *root) {
 
 }
