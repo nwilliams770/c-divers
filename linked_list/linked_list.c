@@ -78,8 +78,3 @@ node_t *ll_remove(node_t *root, int value) {
 
   return NULL;
 }
-
-// seems kinda unneccessary? append method wouldn't ever permit one
-bool ll_is_cyclic(node_t *root) {
-
-}

@@ -68,5 +68,42 @@ int main(int argv, char *argc[]) {
   printf("argv is %d\n", argv);
   person_printer(jimbo);
 
+  // Define an array
+  int numbers[10];
+  // An array, numbers, of ints of length 10
+
+  // Multidimensional Array
+  // type name[size1][size2]...[sizeN];
+  // In this case we don't need the "x" value
+  // because the compiler is smart enough
+  int numbers[][3] = {
+    {1, 2, 3},
+    {4, 5, 6}
+  };
+
+  // We CANNOT do this
+  // int bad_numbers[][5];
+
+  // Strings
+  // They're actually arrays of chars in C
+  // For read-only we can initiate like so
+  char *name = 'Billy Bob';
+
+  // For manipulation like this
+  char editable_name[] = 'Bobby Joe';
+  // Compiler will alocate memory based on size
+  // automatically, but it's the name as saying
+  char editable_name_2[10] = 'Bobby Joe';
+  // Bobby Joe is 9 chars long, we add an extra
+  // for string termination
+
+  // Some built-in str methods
+  // strlen - length
+  // strncmp - returns 0 if same, a different number if not
+  // strncat(destination, source, n) - n is max length of chars to be appended
+
+
   return 0;
 }
+
+
