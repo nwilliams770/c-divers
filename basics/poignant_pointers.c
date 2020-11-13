@@ -20,4 +20,13 @@ void main() {
 
   *pointer_to_foo = *pointer_to_foo + 1;
   // foo is now 3!
+
+
+  // Pointer Arithmetic
+  // Operations that can be performed on C pointers: +, -, ++, --
+  // Comparison operators: >, <, ==
+
+
+  // Function pointers
+
 }
