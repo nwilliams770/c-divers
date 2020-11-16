@@ -11,12 +11,11 @@
 #include <string.h>
 #include <sys/socket.h>
 
-void fail_invalid_url(char *url, char* reason) {
-  printf("Error: Invalid URL %s\n%s\n", url, reason);
-  exit(EXIT_FAILURE);
+void print_url_parse_error(char *url, char* reason) {
+  printf("Error: Failed to parse input URL '%s':\n%s\n", url, reason);
 }
 
-bool split_url(char *url) {
+bool split_url(char *url, char **base_url, char **route) {
   // What designates a valid url?
   // [.a-zA-Z0-9].[a-zA-Z]/[a-zA-Z]
 
@@ -30,9 +29,11 @@ bool split_url(char *url) {
     } else if (c == ':') {
       // http://
       if (i + 2 > strlen(url) - 1) {
-        fail_invalid_url(url, "String ended before protocol definition completed");
+        print_url_parse_error(url, "String ended before protocol definition completed");
+        return false;
       } else if (url[i + 1] != '/' || url[i + 2] != '/') {
-        fail_invalid_url(url, "Protocol not formatted as '://'");
+        print_url_parse_error(url, "Protocol not formatted as '://'");
+        return false;
       }
       char protocol[i + 1];
       memcpy(protocol, url, i);
@@ -40,16 +41,62 @@ bool split_url(char *url) {
       if (strcmp(protocol, "http") != 0) {
         char error[50 + i];
         sprintf(error, "%s protocol not supported\nOnly supports http", protocol);
-        fail_invalid_url(url, error);
+        print_url_parse_error(url, error);
+        return false;
       }
-      printf("http!\n");
+
+      url = &url[i + 3];
       break;
     } else {
-        break;
-        printf("TODO\n");
-        fail_invalid_url(url, "todo");
+      break;
     }
   }
+
+  // Now, we have a URL as either:
+  // google.com
+  // OR
+  // google.com/
+  // OR
+  // google.com/blah[/blah/blah/...]
+  // and we can treat the second and third and ... cases the same
+
+  // Go up to the first slash
+  // If there is no slash found, we'll return URL as is, then route is '/'
+  // If there is a first slash, return URL as up to (not including) the '/', then route as '/', onward
+  for (int i = 0; i < strlen(url); i++) {
+    char c = url[i];
+
+    // when we find the first slash, split the domain from the route
+    if (c == '/') {
+      // up to but not including the current index
+      *base_url = (char *)malloc(i + 1);
+      memcpy(*base_url, url, i);
+      (*base_url)[i] = '\0';
+
+      // current index, to the end
+      int route_len = strlen(url) - i;
+      *route = (char *)malloc(route_len + 1);
+      memcpy(*route, &url[i], route_len);
+      (*route)[route_len] = '\0';
+
+      return true;
+    }
+  }
+
+  // if we never found a slash, the url is the domain and we default to route = '/'
+  *base_url = (char *)malloc(strlen(url) + 1);
+  memcpy(*base_url, url, strlen(url) + 1);
+
+  *route = (char *)malloc(2);
+  char *slash_route = "/";
+  memcpy(*route, slash_route, strlen(slash_route) + 1);
+
+  return true;
+}
+
+void free_url(char **base_url, char **route) {
+  free(*base_url);
+  free(*route);
 }
 
 int main(int argc, char *argv[]) {
@@ -63,9 +110,12 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  split_url(argv[1]);
-  return 1;
-
+  char *base_url;
+  char *route;
+  bool ok = split_url(argv[1], &base_url, &route);
+  if (!ok) {
+    return EXIT_FAILURE;
+  }
 
   // 1 Define server we want to talk to
   int sock;
@@ -74,7 +124,7 @@ int main(int argc, char *argv[]) {
   memset(&hints, 0, sizeof(hints)); // make sure the struct is empty
   hints.ai_family = AF_UNSPEC;     // don't care IPv4 or IPv6
   hints.ai_socktype = SOCK_STREAM; // TCP stream sockets
-  int err = getaddrinfo("google.com", "http", &hints, &my_addr_info);
+  int err = getaddrinfo(base_url, "http", &hints, &my_addr_info);
   if (err) {
     printf("Failed to resolve DNS for google.com\n");
     return EXIT_FAILURE;
@@ -86,8 +136,6 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  printf("%d here's our lovely socket\n", sock);
-
   // 2 Connect to server
   err = connect(sock, my_addr_info->ai_addr, my_addr_info->ai_addrlen);
 
@@ -96,10 +144,9 @@ int main(int argc, char *argv[]) {
     return EXIT_FAILURE;
   }
 
-  printf("We've connected, baby\n");
-
   // 3 Form request
-  char request[] = "GET / HTTP/1.0\r\n\r\n";
+  char *request = (char *)malloc(strlen(route) + 30);
+  sprintf(request, "GET %s HTTP/1.0\r\n\r\n", route);
 
   // 4 Send request to server
   int total_sent = 0;
@@ -113,8 +160,6 @@ int main(int argc, char *argv[]) {
     total_sent += sent;
   }
 
-  printf("We've sent everything, el capitaine. All %d bytes!\n", total_sent);
-
   // 5 Read response
   int max = 10000000;
   char *buf = malloc(max);
@@ -125,7 +170,6 @@ int main(int argc, char *argv[]) {
       printf("Failure on recv :((((\n");
       return EXIT_FAILURE;
     }
-    printf("> read %d more bytes\n", bytes_recv);
     if (bytes_recv == 0) {
       break;
     }
@@ -137,12 +181,11 @@ int main(int argc, char *argv[]) {
     }
   }
 
-  printf("Received!\n");
   for (int i = 0; i < total_recv; i++) {
     printf("%c", buf[i]);
   }
-  printf(" <--dis wut we got\n");
 
   free(buf);
   freeaddrinfo(my_addr_info);
+  free_url(&base_url, &route);
 }
