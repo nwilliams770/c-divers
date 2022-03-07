@@ -78,3 +78,21 @@ node_t *ll_remove(node_t *root, int value) {
 
   return NULL;
 }
+
+bool ll_destroy(node_t *root) {
+  node_t *node = root;
+  node_t *next_node = NULL;
+
+  while (node) {
+    next_node = node->next;
+    free(node);
+    node = next_node;
+
+    if (node == NULL) {
+      return true;
+    }
+  }
+
+  // if input is NULL
+  return false;
+}
