@@ -5,7 +5,7 @@ struct point {
 // To avoid having to use 'struct point' every time we want a new point
 // We can use typedef
 
-typedef struct {
+typedef struct point {
   int x;
   int y;
 } point;
