@@ -1,0 +1,7 @@
+// Compute (float) i
+typedef unsigned float_bits;
+
+float_bits float_i2f(int i) {
+  unsigned sign = (i < 0);
+
+}
