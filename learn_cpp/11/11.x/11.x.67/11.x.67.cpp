@@ -70,9 +70,34 @@ void printCard(const Card& card) {
     }
 }
 
+Deck createDeck()
+{
+  Deck deck{};
+  Index index{ 0 };
+
+  for (int suit{ 0 }; suit < static_cast<int>(CardSuit::max_suits); ++suit)
+  {
+    for (int rank{ 0 }; rank < static_cast<int>(CardRank::max_ranks); ++rank)
+    {
+      deck[index].suit = static_cast<CardSuit>(suit);
+      deck[index].rank = static_cast<CardRank>(rank);
+      ++index;
+    }
+  }
+
+  return deck;
+}
+
+void shuffleDeck(Deck& deck)
+{
+
+}
+
 
 
 int main()
 {
+  auto deck{ createDeck() };
+
   return 0;
 }
