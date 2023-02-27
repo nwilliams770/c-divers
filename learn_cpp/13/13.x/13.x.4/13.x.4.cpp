@@ -184,17 +184,106 @@ class Player
     {
       return (m_score > g_maximumScore);
     }
-
-    void playerTurn()
-    {
-
-    }
-
-    void dealerTurn()
-    {
-
-    }
 };
+
+bool playerWantsHit()
+{
+    while (true)
+    {
+        std::cout << "(h) to hit, or (s) to stand: ";
+
+        char ch{};
+        std::cin >> ch;
+
+        switch (ch)
+        {
+        case 'h':
+            return true;
+        case 's':
+            return false;
+        }
+    }
+}
+
+// Returns true if the player went bust. False otherwise.
+bool playerTurn(Deck& deck, Player& player)
+{
+    while (true)
+    {
+        if (player.isBust())
+        {
+            // This can happen even before the player had a choice if they drew 2
+            // aces.
+            std::cout << "You busted!\n";
+            return true;
+        }
+        else
+        {
+            if (playerWantsHit())
+            {
+                auto card{ player.drawCard(deck) };
+                std::cout << "You were dealt a " << card << " and now have " << player.score() << '\n';
+            }
+            else
+            {
+                // The player didn't go bust.
+                return false;
+            }
+        }
+    }
+}
+
+// // Returns true if the dealer went bust. False otherwise.
+bool dealerTurn(Deck& deck, Player& dealer)
+{
+    // Draw cards until we reach the minimum value.
+    while (dealer.score() < g_minimumDealerScore)
+    {
+        auto card{ dealer.drawCard(deck) };
+        std::cout << "The dealer turned up a " << card << " and now has " << dealer.score() << '\n';
+
+    }
+
+    // If the dealer's score is too high, they went bust.
+    if (dealer.isBust())
+    {
+        std::cout << "The dealer busted!\n";
+        return true;
+    }
+
+    return false;
+}
+
+bool playBlackjack(Deck& deck)
+{
+    // Create the dealer and give them 1 card.
+    Player dealer{};
+    dealer.drawCard(deck);
+
+    // The dealer's card is face up, the player can see it.
+    std::cout << "The dealer is showing: " << dealer.score() << '\n';
+
+    // Create the player and give them 2 cards.
+    Player player{};
+    player.drawCard(deck);
+    player.drawCard(deck);
+
+    std::cout << "You have: " << player.score() << '\n';
+
+    if (playerTurn(deck, player))
+    {
+        // The player went bust.
+        return false;
+    }
+
+    if (dealerTurn(deck, dealer))
+    {
+        // The dealer went bust, the player wins.
+        return true;
+    }
+
+    return (player.score() > dealer.score());
+}
 
 int main()
 {
@@ -211,108 +300,4 @@ int main()
     }
 
     return 0;
-}
-
-
-// bool playerWantsHit()
-// {
-//     while (true)
-//     {
-//         std::cout << "(h) to hit, or (s) to stand: ";
-
-//         char ch{};
-//         std::cin >> ch;
-
-//         switch (ch)
-//         {
-//         case 'h':
-//             return true;
-//         case 's':
-//             return false;
-//         }
-//     }
-// }
-
-// // Returns true if the player went bust. False otherwise.
-// bool playerTurn(const Deck& deck, Index& nextCardIndex, Player& player)
-// {
-//     while (true)
-//     {
-//         if (player.score > g_maximumScore)
-//         {
-//             // This can happen even before the player had a choice if they drew 2
-//             // aces.
-//             std::cout << "You busted!\n";
-//             return true;
-//         }
-//         else
-//         {
-//             if (playerWantsHit())
-//             {
-//                 int cardValue{ getCardValue(deck.at(nextCardIndex++)) };
-//                 player.score += cardValue;
-//                 std::cout << "You were dealt a " << cardValue << " and now have " << player.score << '\n';
-//             }
-//             else
-//             {
-//                 // The player didn't go bust.
-//                 return false;
-//             }
-//         }
-//     }
-// }
-
-// // Returns true if the dealer went bust. False otherwise.
-// bool dealerTurn(const Deck& deck, Index& nextCardIndex, Player& dealer)
-// {
-//     // Draw cards until we reach the minimum value.
-//     while (dealer.score < g_minimumDealerScore)
-//     {
-//         int cardValue{ getCardValue(deck.at(nextCardIndex++)) };
-//         dealer.score += cardValue;
-//         std::cout << "The dealer turned up a " << cardValue << " and now has " << dealer.score << '\n';
-
-//     }
-
-//     // If the dealer's score is too high, they went bust.
-//     if (dealer.score > g_maximumScore)
-//     {
-//         std::cout << "The dealer busted!\n";
-//         return true;
-//     }
-
-//     return false;
-// }
-
-bool playBlackjack(const Deck& deck)
-{
-    // Index of the card that will be drawn next. This cannot overrun
-    // the array, because a player will lose before all cards are used up.
-    Index nextCardIndex{ 0 };
-
-    // Create the dealer and give them 1 card.
-    Player dealer{ getCardValue(deck.at(nextCardIndex++)) };
-
-    // The dealer's card is face up, the player can see it.
-    std::cout << "The dealer is showing: " << dealer.score << '\n';
-
-    // Create the player and give them 2 cards.
-    Player player{ getCardValue(deck.at(nextCardIndex)) + getCardValue(deck.at(nextCardIndex + 1)) };
-    nextCardIndex += 2;
-
-    std::cout << "You have: " << player.score << '\n';
-
-    if (playerTurn(deck, nextCardIndex, player))
-    {
-        // The player went bust.
-        return false;
-    }
-
-    if (dealerTurn(deck, nextCardIndex, dealer))
-    {
-        // The dealer went bust, the player wins.
-        return true;
-    }
-
-    return (player.score > dealer.score);
 }
