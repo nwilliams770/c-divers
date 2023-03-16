@@ -19,8 +19,22 @@ public:
 class Apple: public Fruit
 {
 public:
+  Apple(std::string_view name, std::string_view color)
+    : Fruit{ name, color }
+  {
+  }
+
   Apple(std::string_view color="red")
     : Fruit{ "apple", color }
+  {
+  }
+};
+
+class GrannySmith: public Apple
+{
+public:
+  GrannySmith()
+    : Apple{ "granny smith apple", "green" }
   {
   }
 };
