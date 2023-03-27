@@ -44,6 +44,74 @@ public:
   void addGold(int gold) { m_gold += gold; }
 };
 
+class Potion
+{
+public:
+  enum PotionType
+  {
+    health,
+    strength,
+    poison,
+
+    max_types,
+  };
+
+  enum PotionSize
+  {
+    small,
+    medium,
+    large,
+
+    max_sizes
+  };
+
+private:
+  PotionType m_type{};
+  PotionSize m_size{};
+
+public:
+  Potion(PotionType type, PotionSize size): m_type{ type }, m_size{ size }
+  {
+  }
+
+  PotionType getType() const { return m_type; }
+  PotionSize getSize() const { return m_size; }
+
+  static std::string_view getPotionTypeName(PotionType type)
+  {
+    static constexpr std::array names{
+      "Health",
+      "Strength",
+      "Poison",
+    };
+
+    return names.at(static_cast<std::size_t>(type));
+  }
+
+  static std::string_view getPotionSizeName(PotionSize size)
+  {
+    static constexpr std::array sizes{
+      "Small",
+      "Medium",
+      "Large",
+    };
+
+    return sizes.at(static_cast<std::size_t>(size));
+  }
+
+    std::string getName() const
+    {
+      return std::string(getPotionSizeName(getSize())) + " potion of " + std::string(getPotionTypeName(getType()));
+    }
+
+  static Potion getRandomPotion()
+  {
+    int type{ getRandomNumber(0, static_cast<int>(PotionType::max_types) - 1) };
+    int size{ getRandomNumber(0, static_cast<int>(PotionSize::max_sizes) - 1) };
+
+  }
+};
+
 namespace NewPlayer {
   char constexpr symbol = '@';
   int constexpr health = 10;
@@ -63,7 +131,6 @@ public:
     , Creature{ name, NewPlayer::symbol, NewPlayer::health, NewPlayer::damage, NewPlayer::gold }
   {
   }
-
   void levelUp()
   {
     ++m_level;
@@ -72,6 +139,24 @@ public:
 
   int getLevel() const { return m_level; }
   bool hasWon() const { return m_level >= 20; }
+
+  void drinkPotion(Potion& potion)
+  {
+    switch (potion.getType())
+    {
+    case Potion::health:
+      m_health += ((potion.getSize() == Potion::large ? 5 : 2));
+      break;
+    case Potion::strength:
+      ++m_damage;
+      break;
+    case Potion::poison:
+      reduceHealth(1);
+      break;
+    case Potion::max_types:
+      break;
+    }
+  }
 };
 
 class Monster: public Creature
@@ -110,19 +195,89 @@ public:
   }
 };
 
-void fightMonster()
+void fightMonster(Player& player)
 {
+  Monster monster{ Monster::getRandomMonster() };
+  std::cout << "You have encountered a " << monster.getName() << " (" << monster.getSymbol() << ").\n";
 
+  while (!monster.isDead() && !player.isDead())
+  {
+    std::cout << "(R)un or (F)ight: ";
+    char action{};
+    std::cin >> action;
+    if (action == 'R' || action == 'r')
+    {
+      if (getRandomNumber(1, 2) == 1)
+      {
+        std::cout << "You got away safely.\n";
+        return;
+      }
+      else
+      {
+        std::cout << "You couldn't get away!\n";
+        attackPlayer(monster, player);
+        continue;
+      }
+    }
+
+    if (action == 'F' || action == 'f')
+    {
+      attackMonster(player, monster);
+      attackPlayer(monster, player);
+    }
+  }
 };
 
-void attackMonster()
+void onMonsterKilled(Player& player, Monster& monster)
 {
+  std::cout << "You slayed the " << monster.getName() << ".\n";
+  player.levelUp();
+  std::cout << "You are now level " << player.getLevel() << ".\n";
+  std::cout << "You looted " << monster.getGold() << " gold.\n";
+  player.addGold(monster.getGold());
 
+  constexpr int potionChance{ 33 };
+  if (getRandomNumber(1, 100) <= potionChance)
+  {
+    auto potion{ Potion::getRandomPotion() };
+
+    std::cout << "You found a mythical and mysterious potion! Do you want to drink it? [y/n]";
+    char choice{};
+    std::cin >> choice;
+
+    if (choice == 'Y' || choice == 'y')
+    {
+      player.drinkPotion(potion);
+      std::cout << "You drank a " << potion.getName() << ".\n";
+    }
+  }
+}
+
+void attackMonster(Player& player, Monster& monster)
+{
+  if (player.isDead())
+  {
+    return;
+  }
+
+  std::cout << "You hit the " << monster.getName() << " for " << player.getDamage() << "damage.\n";
+  monster.reduceHealth(player.getDamage());
+
+  if (monster.isDead())
+  {
+    onMonsterKilled(player, monster);
+  }
 };
 
-void attackPlayer()
+void attackPlayer(Monster& monster, Player& player)
 {
+  if (monster.isDead())
+  {
+    return;
+  }
 
+  player.reduceHealth(monster.getDamage());
+  std::cout << "The " << monster.getName() << " hit you for " << monster.getDamage() << " damage.\n";
 };
 
 int main()
@@ -131,15 +286,24 @@ int main()
   std::string playerName;
   std::cin >> playerName;
 
-  Player p{ playerName };
+  Player player{ playerName };
 
-  std::cout << "Welcome " << p.getName() << ".\n";
-  std::cout << "You have " << p.getHealth() << " health and are carrying " <<
-    p.getGold() << " gold.\n";
+  std::cout << "Welcome " << player.getName() << ".\n";
+  std::cout << "You have " << player.getHealth() << " health and are carrying " <<
+    player.getGold() << " gold.\n";
 
-  while (!p.isDead() && !p.hasWon())
+  while (!player.isDead() && !player.hasWon())
   {
+    fightMonster(player);
+  }
 
+  if (player.isDead())
+  {
+    std::cout << "You died at level " << player.getLevel() << " with " << player.getGold() << "gold.\n";
+  }
+  else
+  {
+    std::cout << "You won the game with " << player.getGold() << " gold!\n";
   }
 
   return 0;
