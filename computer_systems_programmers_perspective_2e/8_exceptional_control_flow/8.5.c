@@ -1,3 +1,5 @@
+#include <stdio.h>
+
 unsigned int snooze(unsigned int secs)
 {
   unsigned int slept_for = sleep(secs);
