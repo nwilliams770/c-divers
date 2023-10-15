@@ -1,9 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include <stdalign.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
 // Define block_info_t as an integer type that can store both size and allocation status
 typedef uint32_t block_info_t;
@@ -32,7 +33,13 @@ char memory_pool[1024];
 Block* next_fit_startp;
 static Block* heap_listp;
 
-void* init()
+void* my_malloc(size_t size);
+void my_free(void* ptr);
+Block* find_fit(size_t size);
+Block* place(Block* bp, size_t size);
+void coalesce(Block* bp);
+
+void init()
 {
   Block* prologue_block, *epilogue_block, *first_usable_block;
   size_t prologue_epilogue_size, usable_block_size;
@@ -44,7 +51,7 @@ void* init()
   // Clear the memory pool to initialize it to a known state (all zeros)
   memset(memory_pool, 0, sizeof(memory_pool));
 
-  Block* prologue_block = (Block*)memory_pool;
+  prologue_block = (Block*)memory_pool;
   *prologue_block = (Block){
     .next_block = (Block*)((char*)prologue_block + prologue_epilogue_size),
     .prev_block = NULL,
@@ -61,12 +68,15 @@ void* init()
 
 
   // Create and initialize the first usable block within the memory_pool using a compound literal
-  Block* first_usable_block = prologue_block->next_block;
+  first_usable_block = prologue_block->next_block;
   *first_usable_block = (Block){
       .next_block = epilogue_block, // Point to epilogue block
       .prev_block = prologue_block, // Point to prologue block
       .header = PACK(usable_block_size, 0) // Not allocated
   };
+
+  // Initialize next fit block
+  next_fit_startp = prologue_block;
 }
 
 size_t calculate_padding(size_t alignment, size_t current_size) {
@@ -117,12 +127,17 @@ void my_free(void* ptr)
   Block* bp;
   size_t size;
 
-  bp = (Block*)((char *)ptr - offsetof(Block, data));
+  bp = (Block*)((char *)ptr - offsetof(Block, data) - GUARD_BYTES_SIZE);
   size = GET_SIZE(bp->header);
 
+  if (!GET_ALLOC(bp->header)) {
+    // Block is already freed, return without processing.
+    return;
+  }
+
   if (
-    memcmp(bp->data, GUARD_BYTE_PATTERN, GUARD_BYTE_SIZE) != 0 ||
-    memcmp((char *)bp->data + size - GUARD_BYTE_SIZE, GUARD_BYTE_PATTERN, GUARD_BYTE_SIZE) != 0
+    memcmp((const void *)bp->data, &GUARD_BYTE_PATTERN, GUARD_BYTE_SIZE) != 0 ||
+    memcmp((const void *)((char *)bp->data + size - GUARD_BYTE_SIZE), &GUARD_BYTE_PATTERN, GUARD_BYTE_SIZE) != 0
   )
   {
     // Corruption detected, log
@@ -197,7 +212,7 @@ void coalesce(Block* bp)
   Block* next = bp->next_block;
   while (next && !GET_ALLOC(next->header))
   {
-    bp->header = PACK((GET_SIZE(bp->header) + GET_SIZE(next->header)), 0);
+    bp->header = PACK(GET_SIZE(bp->header) + GET_SIZE(next->header), 0);
     if (next->next_block)
     {
       next->next_block->prev_block = bp;
@@ -206,18 +221,18 @@ void coalesce(Block* bp)
     next = next->next_block;
   }
 
-  next = bp->prev_block;
-  while (next && !GET_ALLOC(next->header))
+  Block* prev = bp->prev_block;
+  while (prev && !GET_ALLOC(prev->header))
   {
-    next->header = PACK((GET_SIZE(bp->header), GET_SIZE(next->header)), 0);
+    prev->header = PACK(GET_SIZE(bp->header) + GET_SIZE(prev->header), 0);
     if (bp->next_block)
     {
-      bp->next_block->prev_block = next;
+      bp->next_block->prev_block = prev;
     }
-    next->next_block = bp->next_block;
+    prev->next_block = bp->next_block;
 
-    bp = next;
-    next = next->prev_block;
+    bp = prev;
+    prev = prev->prev_block;
   }
 }
 
