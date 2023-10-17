@@ -1,0 +1,3 @@
+- interrupt restart from rio_readn/rio_writen
+- buffered vs unbuffered descriptions of rio_readn/rio_writen
+-
